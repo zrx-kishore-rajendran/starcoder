@@ -82,7 +82,7 @@ def get_args():
     parser.add_argument("--no_gradient_checkpointing", action="store_false", default=False)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--num_workers", type=int, default=None)
-    parser.add_argument("--output_dir", type=str, default="./test")
+    parser.add_argument("--output_dir", type=str, default="./checkpoints")
     parser.add_argument("--log_freq", default=100, type=int)
     parser.add_argument("--eval_freq", default=100, type=int)
     parser.add_argument("--save_freq", default=1000, type=int)
@@ -243,7 +243,6 @@ def run_training(args, train_data, val_data):
         use_cache=not args.no_gradient_checkpointing,
         load_in_8bit=True,
         device_map={"": Accelerator().process_index},
-        output_config_file=os.path.join(args.output_dir, "/config.json")  # Specify the output path for the config file
     )
     model = prepare_model_for_int8_training(model)
 
@@ -285,14 +284,12 @@ def run_training(args, train_data, val_data):
         run_name="StarCoder-finetuned",
         report_to="wandb",
         ddp_find_unused_parameters=False,
-        # push_to_hub=True,
     )
 
-    trainer = Trainer(model=model, args=training_args, train_dataset=train_data, eval_dataset=val_data, callbacks=[SavePeftModelCallback, LoadBestPeftModelCallback])
+    trainer = Trainer(model=model, args=training_args, train_dataset=train_data, eval_dataset=val_data)
 
     print("Training...")
     trainer.train()
-    # trainer.push_to_hub()
 
     print("Saving last checkpoint of the model")
     model.save_pretrained(os.path.join(args.output_dir, "final_checkpoint/"))
